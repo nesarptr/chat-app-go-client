@@ -1,11 +1,29 @@
 import React, { useState, useContext } from "react";
-import { gql, useQuery, useLazyQuery, useMutation } from "@apollo/client";
+import {
+  gql,
+  useQuery,
+  useLazyQuery,
+  useMutation,
+  useSubscription,
+} from "@apollo/client";
 
 import UserList from "./UserList";
 import MessageList from "./MessageList";
 import MessageForm from "./MessageForm";
 import { AuthContext } from "../../context/AuthProvider";
 import LoadingSpinner from "../ui/LoadingSpinner";
+
+const NEW_MESSAGE = gql`
+  subscription newMessage {
+    newMessage {
+      uuid
+      from
+      to
+      content
+      createdAt
+    }
+  }
+`;
 
 const SEND_MESSAGE = gql`
   mutation sendMessage($to: String!, $content: String!) {
@@ -53,6 +71,7 @@ function Chat() {
   const [users, setUsers] = useState({});
   const [messages, setMessages] = useState([]);
   const { user } = useContext(AuthContext);
+
   // @ts-ignore
   const { loading } = useQuery(GET_USERS, {
     onCompleted: (data) => {
@@ -64,6 +83,7 @@ function Chat() {
       );
     },
   });
+
   // @ts-ignore
   const [getMessages, { loading: messagesLoading }] = useLazyQuery(
     GET_MESSAGES,
@@ -71,22 +91,34 @@ function Chat() {
       fetchPolicy: "no-cache",
       onCompleted: (data) => {
         setMessages(data.getMessages);
-        const newMessages = data.getMessages;
-        setUsers((users) => {
-          const newUsers = { ...users };
-          for (let i = newMessages.length - 1; i >= 0; i--) {
-            if (newUsers[newMessages[i].to]) {
-              newUsers[newMessages[i].to].latestMessage = newMessages[i];
-            }
-            if (newUsers[newMessages[i].from]) {
-              newUsers[newMessages[i].from].latestMessage = newMessages[i];
-            }
-          }
-          return newUsers;
-        });
       },
     }
   );
+
+  const [sendMessage] = useMutation(SEND_MESSAGE, {
+    onError: (err) => console.error(err),
+  });
+
+  useSubscription(NEW_MESSAGE, {
+    onData: ({ data }) => {
+      if (data.error) {
+        console.error(data.error);
+      }
+      const newMessage = data.data.newMessage;
+      // @ts-ignore
+      setMessages((msgs) => [newMessage, ...msgs]);
+      setUsers((users) => {
+        const newUsers = { ...users };
+        if (newUsers[newMessage.to]) {
+          newUsers[newMessage.to].latestMessage = newMessage;
+        }
+        if (newUsers[newMessage.from]) {
+          newUsers[newMessage.from].latestMessage = newMessage;
+        }
+        return newUsers;
+      });
+    },
+  });
 
   const handleUserClick = (user) => {
     getMessages({
@@ -96,18 +128,6 @@ function Chat() {
     });
     setSelectedUser(user);
   };
-
-  const [sendMessage] = useMutation(SEND_MESSAGE, {
-    onCompleted: (data) => {
-      // @ts-ignore
-      getMessages({
-        variables: {
-          from: data.sendMessage.to,
-        },
-      });
-    },
-    onError: (err) => console.error(err),
-  });
 
   return (
     <div className="flex h-full">

@@ -3,22 +3,12 @@ import React, { useState, useContext } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { gql, useLazyQuery } from "@apollo/client";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import jwtDecode from "jwt-decode";
 
 import { AuthContext } from "../../context/AuthProvider";
+import axios from "../../axiosConfig";
 import LoadingSpinner from "../ui/LoadingSpinner";
-
-const LOGIN_USER = gql`
-  query login($username: String!, $password: String!) {
-    login(username: $username, password: $password) {
-      username
-      email
-      createdAt
-      token
-    }
-  }
-`;
 
 const schema = yup
   .object({
@@ -31,7 +21,6 @@ const schema = yup
   .required("Invalid Submission");
 
 export default function LoginForm() {
-  const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
   const {
@@ -44,23 +33,27 @@ export default function LoginForm() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [loginUser, { loading }] = useLazyQuery(LOGIN_USER, {
-    onError: (err) => setError(err.message),
-    onCompleted(data) {
-      reset();
-      login(data.login);
-    },
-  });
-
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
+    setLoading(true);
     setError("");
-    loginUser({
-      variables: {
-        username: data.username,
-        password: data.password,
-      },
-    });
+    try {
+      const res = await axios.post("/signin", data);
+      const decoded = jwtDecode(res.data?.token);
+      login({
+        userId: decoded.id,
+        username: decoded.username,
+        token: res.data?.token,
+      });
+      reset();
+      window.location.href = window.origin;
+    } catch (error) {
+      setError(error?.response?.data?.message);
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -1,11 +1,12 @@
 // @ts-nocheck
 import React, { createContext, useState } from "react";
 import jwtDecode from "jwt-decode";
+import { close } from "../socket";
 
 export const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
-  login: () => {},
+  login: (loggedUser) => {},
   logout: () => {},
 });
 
@@ -36,6 +37,7 @@ export default function AuthProvider({ children }) {
     localStorage.removeItem("token");
     setUser(null);
     setIsAuthenticated(false);
+    close();
   };
 
   return (

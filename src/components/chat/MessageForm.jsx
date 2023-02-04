@@ -2,6 +2,7 @@ import React from "react";
 
 export default function MessageForm({ onMessageSend, selectedUser }) {
   const [message, setMessage] = React.useState("");
+
   return (
     <form
       className="flex w-full p-2 "
@@ -9,10 +10,8 @@ export default function MessageForm({ onMessageSend, selectedUser }) {
         e.preventDefault();
         if (message.trim().length === 0 || !selectedUser) return;
         onMessageSend({
-          variables: {
-            to: selectedUser.username,
-            content: message,
-          },
+          to: selectedUser.username,
+          content: message,
         });
         setMessage("");
       }}

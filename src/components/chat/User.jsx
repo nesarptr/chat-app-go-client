@@ -27,7 +27,7 @@ export default function User({ user, onTap }) {
         <p className="text-gray-500">
           {
             // @ts-ignore
-            user?.latestMessage?.content || "No Message Found from this user"
+            user?.latestMessage || "No Message Found from this user"
           }
         </p>
       </div>

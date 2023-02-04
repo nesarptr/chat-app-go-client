@@ -9,7 +9,7 @@ export default function MessageList({ messages, user, selectedUser }) {
         <Message
           key={
             // @ts-ignore
-            message.uuid
+            message.ID
           }
           message={message}
           user={user}

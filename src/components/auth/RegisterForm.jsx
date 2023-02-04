@@ -3,29 +3,18 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { gql, useMutation } from "@apollo/client";
 import { Link, useNavigate } from "react-router-dom";
 
+import axios from "../../axiosConfig";
 import LoadingSpinner from "../ui/LoadingSpinner";
-
-const REGISTER_USER = gql`
-  mutation register($username: String!, $email: String!, $password: String!) {
-    register(username: $username, email: $email, password: $password) {
-      username
-      email
-      createdAt
-    }
-  }
-`;
 
 const schema = yup
   .object({
-    username: yup.string().trim().required("Username is required"),
-    email: yup
+    username: yup
       .string()
       .trim()
-      .email("Invalid email address")
-      .required("Email is required"),
+      .min(3, "Username must be at least 3 characters")
+      .required("Username is required"),
     password: yup
       .string()
       .min(6, "Password must be at least 6 characters")
@@ -50,24 +39,21 @@ export default function RegisterForm() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [registerUser, { loading }] = useMutation(REGISTER_USER, {
-    update: (_, __) => {
+  const onSubmit = async (data) => {
+    setLoading(true);
+    setError("");
+    try {
+      await axios.post("/signup", data);
       reset();
       navigate("/login");
-    },
-    onError: (err) => setError(err.message),
-  });
-
-  const onSubmit = (data) => {
-    setError("");
-    registerUser({
-      variables: {
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      },
-    });
+    } catch (error) {
+      setError(error?.response?.data?.message);
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,22 +83,6 @@ export default function RegisterForm() {
           <p className="text-xs italic text-red-500">
             {errors.username.message}
           </p>
-        )}
-      </div>
-      <div className="mb-4">
-        <label htmlFor="email" className="mb-2 block font-medium text-gray-700">
-          Email
-        </label>
-        <input
-          type="email"
-          id="email"
-          className={`w-full rounded-lg border border-gray-400 p-2 ${
-            errors.email?.message ? "border-red-500" : ""
-          }`}
-          {...register("email")}
-        />
-        {errors.email?.message && (
-          <p className="text-xs italic text-red-500">{errors.email.message}</p>
         )}
       </div>
       <div className="mb-4">

@@ -1,5 +1,7 @@
 const jwt = localStorage.getItem("token");
-const socket = new WebSocket(new URL(`ws://127.0.0.1:4000/ws?token=${jwt}`));
+const socket = new WebSocket(
+  new URL(`wss://chat-app-go.onrender.com/ws?token=${jwt}`)
+);
 
 export const connect = (onMessage, onError, onClose) => {
   socket.onopen = (evt) => {
